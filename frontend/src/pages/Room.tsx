@@ -5,7 +5,7 @@ import { useState } from "react";
 
 export default function Room() {
   const { id } = useParams();
-  const [code, setCode] = useState<string>("Start coding!");
+  const [code, setCode] = useState<string>("Start coding...");
   return (
     <>
         <h2>Room: {id}</h2>
