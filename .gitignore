@@ -1,0 +1,22 @@
+#Front end
+frontend/.vscode
+frontend/node_modules
+frontend/public
+frontend/.env
+
+#Back end
+backend/.venv
+backend/.env
+
+#Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+#Logs
+*.log
+
+#OS files
+.DS_Store
+Thumbs.db
