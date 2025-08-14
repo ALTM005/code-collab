@@ -4,6 +4,39 @@ from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from jose import jwt, JWTError
 from time import time 
+import socketio
+from starlette.applications import Starlette
+
+sio = socketio.AsyncServer(
+    async_mode = "asgi",
+    cors_allowed_origin = ["http://127.0.0.1:5173"]
+)
+
+sio_app = socketio.ASGIApp(sio)
+
+@sio.event
+async def connect(sid, environ):
+    print("Socket Connected", sid)
+
+@sio.event
+async def disconnet(sid):
+    print("Socket Disconnected",sid)
+
+@sio.event
+async def join_room(sid, data):
+    room_id = data["room_id"]
+    await sio.save_session(sid, {"room_id":room_id})
+    await sio.enter_room(sid, room_id)
+    await sio.emit("presence", {"sid": sid, "type": "join"}, room=room_id, skip_sid=sid) #Take notes
+
+@sio.event
+async def cursor_sharing(sid, data):
+    sess = await sio.get_session(sid)
+    room_id = sess.get("room_id")
+    await sio.emit("cursor", data, room=room_id, skip_sid=sid)
+
+
+
 
 load_dotenv()
 
@@ -125,3 +158,9 @@ async def join_room(room_id: str, user_id : str = Depends(get_user_id)):
         )
         r.raise_for_status()
         return {"joined": True}
+
+
+fast_api = app
+asgi = Starlette()
+asgi.mount("/", fast_api)
+asgi.mount("/socket.io", sio_app)
