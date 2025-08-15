@@ -8,10 +8,68 @@ import { supabase } from "../supabaseClient";
 const API = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 
 
-
 export default function Room() {
-  const { id } = useParams();
-  const [code, setCode] = useState<string>("Start coding...");
+
+  const {id: room_id} = useParams();
+  const socketRef = useRef<Socket | null>(null);
+  const editorRef = useRef<any>(null);
+  const decorsRef = useRef<String[]>([]);
+  //const [code, setCode] = useState<string>("Start coding...");
+
+  useEffect(()=>{
+    const s = io(API,{path:"/socket.io"});
+    socketRef.current = s;
+
+    s.on("connect", ()=>{
+      s.emit("join",{room_id})
+    });
+
+    s.on("cursor", (data : any)=>{
+      const editor = editorRef.current;
+      if (!editor)
+      {
+        return;
+      }
+      const {lineNumber, column} = data;
+
+      decorsRef.current = editor.deltaDecorations(
+        decorsRef.current,
+        [{
+          range: {
+            startLineNumber: lineNumber,
+            startColumn: column,
+            endLineNumber: lineNumber,
+            endColumn: column + 1,
+          },
+          options: {
+            className: "remote-cursor",
+            stickiness: 1,
+          }
+        }]
+      );
+
+    });
+
+    return () => { s.disconnect(); };
+
+  },[room_id]);
+
+  const OnMount : OnMount = (editor , monaco) =>{
+    editorRef.current = editor;
+    editor.onDidChangeCursorPosition(async (event) => {
+      const {data} = await supabase.auth.getUser();
+      const userId = data.user?.id;
+      socketRef.current.emit("cursor", {
+        userId,
+        lineNumber: event.position.lineNumber,
+        column: event.position.column,
+      });
+      
+    });
+
+  };
+
+
   return (
     <>
         <h2>Room: {id}</h2>
