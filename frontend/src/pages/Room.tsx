@@ -1,6 +1,12 @@
 import { useParams } from "react-router-dom";
-import { Editor } from "@monaco-editor/react";
-import { useState } from "react";
+import Editor, {OnMount} from "@monaco-editor/react";
+import { useEffect, useRef } from "react";
+import { io, Socket } from "socket.io-client"; //install socket
+import { supabase } from "../supabaseClient";
+
+
+const API = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
+
 
 
 export default function Room() {
