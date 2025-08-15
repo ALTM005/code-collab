@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import Editor, {OnMount} from "@monaco-editor/react";
+import Editor, { type OnMount} from "@monaco-editor/react";
 import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client"; //install socket
 import { supabase } from "../supabaseClient";
@@ -59,7 +59,7 @@ export default function Room() {
     editor.onDidChangeCursorPosition(async (event) => {
       const {data} = await supabase.auth.getUser();
       const userId = data.user?.id;
-      socketRef.current.emit("cursor", {
+      socketRef.current?.emit("cursor", {
         userId,
         lineNumber: event.position.lineNumber,
         column: event.position.column,
@@ -72,16 +72,17 @@ export default function Room() {
 
   return (
     <>
-        <h2>Room: {id}</h2>
+        <h2>Room: {room_id}</h2>
         <div style={{ height: "70vh", border: "1px solid #ddd" }}>
             <Editor
             height="100%"
             defaultLanguage="javascript"
-            value={code}
-            onChange={(event) => setCode(event ?? "")}
+            value={"Start Coding!"}
+            onMount={OnMount}
             options={{ fontSize: 14, minimap: { enabled: false } }}
             />
       </div>
+      <style>{`.remote-cursor { border-left: 2px solid; }`}</style>
     </>
 
   );
