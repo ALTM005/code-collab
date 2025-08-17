@@ -8,9 +8,12 @@ import socketio
 from starlette.applications import Starlette
 
 sio = socketio.AsyncServer(
-    async_mode = "asgi",
-    cors_allowed_origin = ["http://127.0.0.1:5173"]
+    async_mode="asgi",
+    cors_allowed_origins=[],  # Empty list allows all for WebSocket
+    allow_upgrades=True,
 )
+
+room_code_map = {}
 
 sio_app = socketio.ASGIApp(sio)
 
@@ -19,21 +22,31 @@ async def connect(sid, environ):
     print("Socket Connected", sid)
 
 @sio.event
-async def disconnet(sid):
+async def disconnect(sid):
     print("Socket Disconnected",sid)
 
 @sio.event
-async def join_room(sid, data):
+async def join(sid, data):
     room_id = data["room_id"]
     await sio.save_session(sid, {"room_id":room_id})
     await sio.enter_room(sid, room_id)
+    current_code = room_code_map.get(room_id)
+    if current_code is not None:
+        await sio.emit("initial-code", {"code": current_code}, to=sid)
     await sio.emit("presence", {"sid": sid, "type": "join"}, room=room_id, skip_sid=sid) #Take notes
 
 @sio.event
-async def cursor_sharing(sid, data):
+async def cursor(sid, data):
     sess = await sio.get_session(sid)
     room_id = sess.get("room_id")
     await sio.emit("cursor", data, room=room_id, skip_sid=sid)
+
+@sio.event
+async def code_change(sid, data):
+    room_id = data.get("roomId")
+    code = data.get("code")
+    room_code_map[room_id] = code
+    await sio.emit("code-update", {"code": code}, room=room_id, skip_sid=sid)
 
 
 
@@ -162,5 +175,6 @@ async def join_room(room_id: str, user_id : str = Depends(get_user_id)):
 
 fast_api = app
 asgi = Starlette()
-asgi.mount("/", fast_api)
 asgi.mount("/socket.io", sio_app)
+asgi.mount("/", fast_api)
+
