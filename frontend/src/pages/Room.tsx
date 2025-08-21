@@ -51,7 +51,9 @@ export default function Room() {
     });
 
     s.on("initial-code", (data)=>{
+      isApplyingRemoteChange.current = true;
       editorRef.current?.setValue(data.code || "");
+      isApplyingRemoteChange.current = false;
     });
 
     s.on("code-update", (data : {changes : monaco.editor.IModelContentChange[]})=>{
