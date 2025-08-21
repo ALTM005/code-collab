@@ -6,6 +6,24 @@ from jose import jwt, JWTError
 from time import time 
 import socketio
 from starlette.applications import Starlette
+import asyncio
+
+async def save_code_db (room_id: str, code:str):
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.patch(
+                url = f'{SUPABASE_URL}/rest/v1/rooms?id=eq.{room_id}',
+                headers={
+                    "apikey": SUPABASE_SERVICE_ROLE,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=representation"
+                },
+                json={"code": code}
+            )
+            r.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        print(f"Error saving code for room {room_id}, error: {e}")
 
 
 load_dotenv()
@@ -78,25 +96,14 @@ async def code_change(sid, data):
     changes = data.get("changes")
     full_code = data.get("code")
     if room_id:
-        if full_code is not None:
-            try:
-                async with httpx.AsyncClient() as client:
-                    r = await client.patch(
-                        url = f'{SUPABASE_URL}/rest/v1/rooms?id=eq.{room_id}',
-                        headers={
-                            "apikey": SUPABASE_SERVICE_ROLE,
-                            "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE}",
-                            "Content-Type": "application/json",
-                            "Prefer": "return=representation"
-                        },
-                        json={"code": full_code}
-                    )
-                    r.raise_for_status()
-            except httpx.HTTPStatusError as e:
-                print(f"Error saving code for room {room_id}, error: {e}")
-
         if changes:
             await sio.emit("code-update", {"changes": changes}, room=room_id, skip_sid=sid)
+            
+        if full_code is not None:
+            asyncio.create_task(save_code_db(room_id=room_id, code=full_code))
+            
+
+        
 
 
 app = FastAPI()
