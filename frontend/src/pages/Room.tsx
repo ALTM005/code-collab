@@ -92,6 +92,11 @@ export default function Room() {
     }); //removes cursors
 
     return () => { 
+      s.off("connect");
+      s.off("initial-code");
+      s.off("code-update");
+      s.off("cursor");
+      s.off("user-disconnected");
       s.disconnect();
       if (cursorUpdateTimeoutRef.current){
         clearTimeout(cursorUpdateTimeoutRef.current);
