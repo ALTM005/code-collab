@@ -7,15 +7,23 @@ from time import time
 import socketio
 from starlette.applications import Starlette
 
+
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE = os.getenv("SUPABASE_SERVICE_ROLE")
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN")
+
 sio = socketio.AsyncServer(
     async_mode="asgi",
-    cors_allowed_origins=[],  # Empty list allows all for WebSocket
+    cors_allowed_origins=[FRONTEND_ORIGIN, "http://127.0.0.1:5173"],  # Empty list allows all for WebSocket
     allow_upgrades=True,
 )
 
-room_code_map = {}
-
 sio_app = socketio.ASGIApp(sio)
+
+room_code_map = {}
 
 @sio.event
 async def connect(sid, environ):
@@ -24,39 +32,51 @@ async def connect(sid, environ):
 @sio.event
 async def disconnect(sid):
     print("Socket Disconnected",sid)
+    sess = await sio.get_session(sid)
+    room_id = sess.get("room_id")
+    if room_id:
+        await sio.emit("user-disconnected", {"sid": sid}, room=room_id, skip_sid=sid)
 
 @sio.event
 async def join(sid, data):
     room_id = data["room_id"]
     await sio.save_session(sid, {"room_id":room_id})
     await sio.enter_room(sid, room_id)
-    current_code = room_code_map.get(room_id)
-    if current_code is not None:
-        await sio.emit("initial-code", {"code": current_code}, to=sid)
-    await sio.emit("presence", {"sid": sid, "type": "join"}, room=room_id, skip_sid=sid) #Take notes
+    #Log user in shell
+    print(f"Socket {sid} joined room {room_id}")
+    current_code = room_code_map.get(room_id, "// Welcome to the collaborative editor!")
+    await sio.emit("initial-code", {"code": current_code}, to=sid)
 
 @sio.event
 async def cursor(sid, data):
     sess = await sio.get_session(sid)
     room_id = sess.get("room_id")
-    await sio.emit("cursor", data, room=room_id, skip_sid=sid)
+    if room_id:
+        await sio.emit("cursor", data, room=room_id, skip_sid=sid)
 
 @sio.event
 async def code_change(sid, data):
-    room_id = data.get("roomId")
-    code = data.get("code")
-    room_code_map[room_id] = code
-    await sio.emit("code-update", {"code": code}, room=room_id, skip_sid=sid)
+    sess = await sio.get_session(sid)
+    room_id = sess.get("room_id")
+    changes = data.get("changes")
+    full_code = data.get("code")
+    if room_id:
+        if full_code is not None:
+            room_code_map[room_id] = full_code
+        
+        if changes:
+            await sio.emit("code-update", {"changes": changes}, room=room_id, skip_sid=sid)
 
 
+app = FastAPI()
 
-
-load_dotenv()
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_ROLE = os.getenv("SUPABASE_SERVICE_ROLE")
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
-FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[FRONTEND_ORIGIN,"http://127.0.0.1:5173"], 
+    allow_credentials=True,
+    allow_methods=["*"],  
+    allow_headers=["*"],  
+)
 
 
 for k in ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE", "SUPABASE_JWT_SECRET"):
@@ -118,15 +138,6 @@ def get_user_id(authorization: str | None = Header(default=None)) -> str:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[FRONTEND_ORIGIN,"http://127.0.0.1:5173"], 
-    allow_credentials=True,
-    allow_methods=["*"],  
-    allow_headers=["*"],  
-)
 
 
 @app.get("/health")
@@ -177,4 +188,3 @@ fast_api = app
 asgi = Starlette()
 asgi.mount("/socket.io", sio_app)
 asgi.mount("/", fast_api)
-
