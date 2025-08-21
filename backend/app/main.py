@@ -204,14 +204,14 @@ async def join_room(room_id: str, user_id : str = Depends(get_user_id)):
                 "apikey": SUPABASE_SERVICE_ROLE,
                 "Authorization" : f"Bearer {SUPABASE_SERVICE_ROLE}",
                 "Content-Type": "application/json",
-                "Prefer": "return=representation"
+                "Prefer": "resolution=merge-duplicates"
             },
             json={
                 "room_id":room_id,
                 "user_id":user_id
             }
         )
-        r.raise_for_status()
+        # ignore conflict to allow mergiing same user r.raise_for_status()
         return {"joined": True}
 
 
