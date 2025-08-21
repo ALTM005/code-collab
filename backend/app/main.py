@@ -23,7 +23,6 @@ sio = socketio.AsyncServer(
 
 sio_app = socketio.ASGIApp(sio)
 
-room_code_map = {}
 
 @sio.event
 async def connect(sid, environ):
@@ -44,8 +43,26 @@ async def join(sid, data):
     await sio.enter_room(sid, room_id)
     #Log user in shell
     print(f"Socket {sid} joined room {room_id}")
-    current_code = room_code_map.get(room_id, "// Welcome to the collaborative editor!")
+
+    current_code = "// Welcome to the collaborative editor!"
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(
+            url = f'{SUPABASE_URL}/rest/v1/rooms?id=eq.{room_id}&select=code',
+            headers={
+                "apikey": SUPABASE_SERVICE_ROLE,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE}",
+                "Content-Type": "application/json",
+            }
+        )
+        r.raise_for_status()
+        if r.json() and r.json()[0].get("code") is not None:
+            current_code = r.json()[0]["code"]
+    except httpx.HTTPStatusError as e:
+        print(f"Error fetching code for room {room_id}, error: {e}")
+
     await sio.emit("initial-code", {"code": current_code}, to=sid)
+
 
 @sio.event
 async def cursor(sid, data):
@@ -62,8 +79,22 @@ async def code_change(sid, data):
     full_code = data.get("code")
     if room_id:
         if full_code is not None:
-            room_code_map[room_id] = full_code
-        
+            try:
+                async with httpx.AsyncClient() as client:
+                    r = await client.patch(
+                        url = f'{SUPABASE_URL}/rest/v1/rooms?id=eq.{room_id}',
+                        headers={
+                            "apikey": SUPABASE_SERVICE_ROLE,
+                            "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE}",
+                            "Content-Type": "application/json",
+                            "Prefer": "return=representation"
+                        },
+                        json={"code": full_code}
+                    )
+                    r.raise_for_status()
+            except httpx.HTTPStatusError as e:
+                print(f"Error saving code for room {room_id}, error: {e}")
+
         if changes:
             await sio.emit("code-update", {"changes": changes}, room=room_id, skip_sid=sid)
 
