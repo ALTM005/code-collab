@@ -4,6 +4,8 @@ import * as monaco from "monaco-editor";
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client"; //install socket
 import { supabase } from "../supabaseClient";
+import { Box } from "@chakra-ui/react";
+import LanguageSelector from "./components/LanguageSelector";
 
 
 const API = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
@@ -127,6 +129,7 @@ export default function Room() {
 
   const OnMount : OnMount = (editor , monaco) =>{
     editorRef.current = editor;
+    editor.focus();
     monacoRef.current = monaco;
 
 
@@ -168,17 +171,19 @@ export default function Room() {
 
 
   return (
-    <>
+    <Box minH="100vh" bg="#0fa19" color="gray.500" px={6} py={8}>
         <h2>Room: {room_id}</h2>
-        <div style={{ height: "70vh", border: "1px solid #ddd" }}>
+        <Box>
+          <LanguageSelector/>
             <Editor
-            height="100%"
+            height="75vh"
+            theme="vs-dark"
             defaultLanguage="javascript"
             defaultValue={"// Welcome! Start coding..."}
             onMount={OnMount}
             options={{ fontSize: 14, minimap: { enabled: false } }}
             />
-      </div>
+      </Box>
       <style>{`
           .remote-cursor-widget {
             position: absolute;
@@ -191,7 +196,7 @@ export default function Room() {
             .map(([sid, cursor]) => `.remote-cursor-widget-${sid} { background-color: ${cursor.color}; }`)
             .join("\n")}
         `}</style>
-    </>
+    </Box>
 
   );
 }
