@@ -7,6 +7,19 @@ from time import time
 import socketio
 from starlette.applications import Starlette
 import asyncio
+from pydantic import BaseModel
+
+class RunRequest(BaseModel):
+    language:str
+
+LANGUAGE_VERSIONS = {
+  "javascript": "18.15.0",
+  "typescript": "5.0.3",
+  "python": "3.10.0",
+  "java": "15.0.2",
+  "csharp": "6.12.0",
+  "php": "8.2.3",
+}
 
 async def save_code_db (room_id: str, code:str):
     try:
@@ -32,6 +45,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE = os.getenv("SUPABASE_SERVICE_ROLE")
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN")
+PISTON_API = os.getenv("PISTON_API")
 
 sio = socketio.AsyncServer(
     async_mode="asgi",
@@ -117,7 +131,7 @@ app.add_middleware(
 )
 
 
-for k in ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE", "SUPABASE_JWT_SECRET"):
+for k in ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE", "SUPABASE_JWT_SECRET","PISTON_API"):
     if not os.getenv(k):
         raise RuntimeError(f"Missing {k}. Check backend/.env")
 
@@ -220,6 +234,55 @@ async def join_room(room_id: str, user_id : str = Depends(get_user_id)):
         )
         # ignore conflict to allow mergiing same user r.raise_for_status()
         return {"joined": True}
+
+@app.post("/rooms/{room_id}/run")
+async def run_code(room_id:str, request:RunRequest, user_id:str = Depends(get_user_id)):
+    code_run = ""
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(
+            url = f'{SUPABASE_URL}/rest/v1/rooms?id=eq.{room_id}&select=code',
+            headers={
+                "apikey": SUPABASE_SERVICE_ROLE,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE}",
+                "Content-Type": "application/json",
+            }
+        )
+        r.raise_for_status()
+        if r.json():
+            code_run = r.json()[0].get("code","")
+    except httpx.HTTPStatusError as e:
+        await sio.emit("execution-result",{"output": f"Error fetching code: {e}"}, room=room_id)
+        return {"status": "error fetching code"}
+    
+
+    try:
+        selected_language = request.language
+        language_ver = LANGUAGE_VERSIONS.get(selected_language,"18.15.0")
+        async with httpx.AsyncClient() as client:
+            r = await client.post(
+                url = PISTON_API,
+                json={
+                    "language": selected_language,
+                    "version": language_ver,
+                    "files": [{"content": code_run}]
+                }
+            )
+            result= r.json()
+    except Exception as e:
+        await sio.emit("execution-result", {"output": f"Error contacting Piston API: {e}"}, room=room_id)
+        return {"status": "error with piston"}
+
+    print("INCOMING RUN REQUEST BODY:", result)
+
+    output = result.get("run", {}).get("output", "No output.")
+    if result.get("run", {}).get("stderr"):
+         output = result["run"]["stderr"]
+
+    await sio.emit("execution-result", {"output": output}, room=room_id)
+
+    return {"status": "Execution triggered"}
+            
 
 
 fast_api = app
