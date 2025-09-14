@@ -132,6 +132,17 @@ async def chat_message(sid, data):
         )
 
 
+@sio.event
+async def language_change(sid, data):
+    sess = await sio.get_session(sid)
+    room_id = sess.get("room_id")
+    if room_id:
+        await sio.emit("language-update",
+        {"language":data.get("language")},
+        skip_sid=sid,
+        room=room_id
+        )
+
         
 
 
