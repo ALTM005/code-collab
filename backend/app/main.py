@@ -116,6 +116,21 @@ async def code_change(sid, data):
         if full_code is not None:
             asyncio.create_task(save_code_db(room_id=room_id, code=full_code))
             
+@sio.event
+async def chat_message(sid, data):
+    sess = await sio.get_session(sid)
+    room_id = sess.get("room_id")
+    print(f"3. Backend received chat message for room '{room_id}': {data}")
+
+    if room_id:
+
+        sender_name = f"User-{sid[:5]}"
+        await sio.emit(
+            "new-message",
+            {"text": data.get("text"), "sender":sender_name},
+            room=room_id
+        )
+
 
         
 
