@@ -114,20 +114,27 @@ export default function Room() {
     console.log("[Step 4] Rendering remote cursors...", remoteCursors);
 
     if (!decorationsCollectionRef.current) {
-      decorationsCollectionRef.current = editorRef.current.createDecorationsCollection();
+      decorationsCollectionRef.current =
+        editorRef.current.createDecorationsCollection();
     }
     const decorations = Object.entries(remoteCursors).map(([sid, cursor]) => ({
-      range: new monaco.Range(cursor.position.lineNumber, cursor.position.column, cursor.position.lineNumber, cursor.position.column),
+      range: new monaco.Range(
+        cursor.position.lineNumber,
+        cursor.position.column,
+        cursor.position.lineNumber,
+        cursor.position.column
+      ),
       options: {
         after: { content: "" },
         afterContentClassName: `remote-cursor-widget remote-cursor-widget-${sid}`,
-        stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+        stickiness:
+          monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
       },
     }));
     decorationsCollectionRef.current.set(decorations);
   }, [remoteCursors]);
 
-  const OnMount : OnMount = (editor , monaco) =>{
+  const OnMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     editor.focus();
     monacoRef.current = monaco;
@@ -184,18 +191,23 @@ export default function Room() {
             options={{ fontSize: 14, minimap: { enabled: false } }}
             />
       </Box>
+
+      {/* remote cursor styles */}
       <style>{`
-          .remote-cursor-widget {
-            position: absolute;
-            width: 2px;
-            height: 1.2em;
-            margin-left: -1px;
-            pointer-events: none;
-          }
-          ${Object.entries(remoteCursors)
-            .map(([sid, cursor]) => `.remote-cursor-widget-${sid} { background-color: ${cursor.color}; }`)
-            .join("\n")}
-        `}</style>
+      .remote-cursor-widget {
+        position: absolute;
+        width: 2px;
+        height: 1.2em;
+        margin-left: -1px;
+        pointer-events: none;
+      }
+      ${Object.entries(remoteCursors)
+        .map(
+          ([sid, cursor]) =>
+            `.remote-cursor-widget-${sid} { background-color: ${cursor.color}; }`
+        )
+        .join("\n")}
+    `}</style>
     </Box>
 
   );
