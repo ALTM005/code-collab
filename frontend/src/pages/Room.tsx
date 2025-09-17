@@ -40,54 +40,79 @@ export default function Room() {
     });
   }, []);
 
-  useEffect(()=>{
-    const s = io(API,{
-      path:"/socket.io",
-      transports: ["websocket"]
-    });
-    socketRef.current = s;
+  useEffect(() => {
+    socket.connect();
 
-    s.on("connect", ()=>{
-      console.log("Socket connected:", s.id) //remove before hosting, check s.id and sid
-      s.emit("join",{room_id})
-    });
+    return () => {
+      socket.disconnect();
+    };
+  }, [socket]);
 
-    s.on("initial-code", (data)=>{
-      isApplyingRemoteChange.current = true;
-      editorRef.current?.setValue(data.code || "");
-      isApplyingRemoteChange.current = false;
-    });
+  useEffect(() => {
+    if (!socket) return;
 
-    s.on("code-update", (data : {changes : monaco.editor.IModelContentChange[]})=>{
-      const model = editorRef.current?.getModel();
-      if (!model || !data.changes)
-      {
-        return;
+    const onConnect = () => {
+      socket.emit("join", { room_id });
+    };
+
+    socket.on("connect", onConnect);
+
+    socket.on("initial-code", (data) => {
+      if (data.code) {
+        isApplyingRemoteChange.current = true;
+        editorRef.current?.setValue(data.code);
+        isApplyingRemoteChange.current = false;
       }
-      isApplyingRemoteChange.current = true;
-      model.applyEdits(data.changes.map(c => ({
-        ...c,
-        range: new monaco.Range(c.range.startLineNumber,c.range.startColumn,c.range.endLineNumber,c.range.endColumn)
-      })));
-      isApplyingRemoteChange.current = false;
     });
 
-    s.on("cursor", (data : {userId: string; sid: string; lineNumber: number; column: number})=>{
-      console.log("Cursor event received", data); //remove before hosting
-      if (data.userId !== currentUserIdRef.current && monacoRef.current){
-        setRemoteCursors((prev)=>({
-          ...prev,
-          [data.sid]: {
-            position: new monacoRef.current!.Position(data.lineNumber, data.column),
-            color: getColorForId(data.userId)
-          },
-
-        }));
+    socket.on(
+      "code-update",
+      (data: { changes: monaco.editor.IModelContentChange[] }) => {
+        const model = editorRef.current?.getModel();
+        if (!model || !data.changes) {
+          return;
+        }
+        isApplyingRemoteChange.current = true;
+        model.applyEdits(
+          data.changes.map((c) => ({
+            ...c,
+            range: new monaco.Range(
+              c.range.startLineNumber,
+              c.range.startColumn,
+              c.range.endLineNumber,
+              c.range.endColumn
+            ),
+          }))
+        );
+        isApplyingRemoteChange.current = false;
       }
+    );
 
-    });
+    socket.on(
+      "cursor",
+      (data: {
+        userId: string;
+        sid: string;
+        lineNumber: number;
+        column: number;
+      }) => {
+        console.log("Cursor event received", data); //remove before hosting
+        if (data.userId !== currentUserIdRef.current && monacoRef.current) {
+          setRemoteCursors((prev) => ({
+            ...prev,
+            [data.sid]: {
+              position: new monacoRef.current!.Position(
+                data.lineNumber,
+                data.column
+              ),
+              color: getColorForId(data.userId),
+            },
+          }));
+        }
+      }
+    );
 
-    s.on("user-disconnected", (data: { sid: string }) => {
+    socket.on("user-disconnected", (data: { sid: string }) => {
       setRemoteCursors((prev) => {
         const newCursors = { ...prev };
         delete newCursors[data.sid];
@@ -95,22 +120,27 @@ export default function Room() {
       });
     }); //removes cursors
 
-    return () => { 
-      s.off("connect");
-      s.off("initial-code");
-      s.off("code-update");
-      s.off("cursor");
-      s.off("user-disconnected");
-      s.disconnect();
-      if (cursorUpdateTimeoutRef.current){
+
+
+    if (socket.connected) {
+      onConnect();
+    }
+
+    return () => {
+      socket.off("connect");
+      socket.off("initial-code");
+      socket.off("code-update");
+      socket.off("cursor");
+      socket.off("user-disconnected");
+      if (cursorUpdateTimeoutRef.current) {
         clearTimeout(cursorUpdateTimeoutRef.current);
       }
     };
-  },[room_id]);
+  }, [room_id, socket]);
 
   useEffect(() => {
     if (!editorRef.current || !monacoRef.current) return;
-    
+
     console.log("[Step 4] Rendering remote cursors...", remoteCursors);
 
     if (!decorationsCollectionRef.current) {
@@ -151,27 +181,27 @@ export default function Room() {
         if (cursorUpdateTimeoutRef.current) {
           clearTimeout(cursorUpdateTimeoutRef.current);
         }
-      
-      //set new timeout
-      cursorUpdateTimeoutRef.current = setTimeout(()=>{
-        console.log("Emiting cursor position");
-        socketRef.current?.emit("cursor", {
-          userId: currentUserIdRef.current,
-          sid: socketRef.current.id,
-          lineNumber: event.position.lineNumber,
-          column: event.position.column
-        }); 
-      }, 100)//100ms break
-    }  
+
+        //set new timeout
+        cursorUpdateTimeoutRef.current = setTimeout(() => {
+          console.log("Emiting cursor position");
+          socket.emit("cursor", {
+            userId: currentUserIdRef.current,
+            sid: socket.id,
+            lineNumber: event.position.lineNumber,
+            column: event.position.column,
+          });
+        }, 100); //100ms break
+      }
     });
 
-    editor.onDidChangeModelContent((event)=>{
-      if (isApplyingRemoteChange.current){
+    editor.onDidChangeModelContent((event) => {
+      if (isApplyingRemoteChange.current) {
         return;
       }
-      socketRef.current?.emit("code_change", {
+      socket.emit("code_change", {
         changes: event.changes,
-        code: editor.getValue()
+        code: editor.getValue(),
       });
     });
   };
