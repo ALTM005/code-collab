@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import Editor, { type OnMount} from "@monaco-editor/react";
+import Editor, { type OnMount } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client"; //install socket
@@ -7,6 +7,9 @@ import { supabase } from "../supabaseClient";
 import { Box, HStack, VStack } from "@chakra-ui/react";
 import LanguageSelector from "./components/LanguageSelector";
 import { CODE_SNIPPETS, type LANGUAGE_VERSIONS } from "../constants";
+import Output from "./components/OutPut";
+import Chat from "./components/Chat";
+import { useNavigate } from "react-router-dom";
 
 const API = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 
