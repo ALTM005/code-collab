@@ -4,37 +4,41 @@ import * as monaco from "monaco-editor";
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client"; //install socket
 import { supabase } from "../supabaseClient";
-import { Box } from "@chakra-ui/react";
+import { Box, HStack, VStack } from "@chakra-ui/react";
 import LanguageSelector from "./components/LanguageSelector";
-
+import { CODE_SNIPPETS, type LANGUAGE_VERSIONS } from "../constants";
 
 const API = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 
-const CURSOR_COLORS = ["#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#A133FF", "#33FFA1"];
-const getColorForId = (id : string) =>{
+const CURSOR_COLORS = [
+  "#FF5733",
+  "#33FF57",
+  "#3357FF",
+  "#FF33A1",
+  "#A133FF",
+  "#33FFA1",
+];
+const getColorForId = (id: string) => {
   let tot = 0;
-  for (let i = 0; i < id.length; i++){
-    tot += id.charCodeAt(i); 
+  for (let i = 0; i < id.length; i++) {
+    tot += id.charCodeAt(i);
   }
   return CURSOR_COLORS[tot % CURSOR_COLORS.length];
-}
-
+};
 
 export default function Room() {
-
-  const {id: room_id} = useParams();
-  const socketRef = useRef<Socket | null>(null);
+  const { id: room_id } = useParams();
+  //const socketRef = useRef<Socket | null>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof monaco | null>(null);
   const [remoteCursors, setRemoteCursors] = useState<Record<string, any>>({});
   const currentUserIdRef = useRef<string | null>(null);
-  const decorationsCollectionRef = useRef<monaco.editor.IEditorDecorationsCollection | null>(null);
+  const decorationsCollectionRef =
+    useRef<monaco.editor.IEditorDecorationsCollection | null>(null);
   const isApplyingRemoteChange = useRef(false);
   const cursorUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  useEffect(()=>{
-    supabase.auth.getUser().then(({data})=>{
-      if (data.user){
+  const [language, setLanguage] = useState<Language>("javascript");
+  type Language = keyof typeof LANGUAGE_VERSIONS;
         currentUserIdRef.current = data.user.id;
       }
     });
@@ -121,6 +125,11 @@ export default function Room() {
     }); //removes cursors
 
 
+    socket.on("language-update", (data: { language: Language }) => {
+      if (data.language) {
+        setLanguage(data.language);
+      }
+    });
 
     if (socket.connected) {
       onConnect();
@@ -131,6 +140,7 @@ export default function Room() {
       socket.off("initial-code");
       socket.off("code-update");
       socket.off("cursor");
+      socket.off("language-update");
       socket.off("user-disconnected");
       if (cursorUpdateTimeoutRef.current) {
         clearTimeout(cursorUpdateTimeoutRef.current);
@@ -206,6 +216,13 @@ export default function Room() {
     });
   };
 
+  const onSelect = (lang: Language) => {
+    setLanguage(lang);
+    if (editorRef.current) {
+      editorRef.current.setValue(CODE_SNIPPETS[lang]);
+    }
+    socket.emit("language_change", { language: lang });
+  };
 
   return (
     <Box minH="100vh" bg="#0fa19" color="gray.500" px={6} py={8}>
