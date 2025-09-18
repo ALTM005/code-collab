@@ -42,6 +42,44 @@ export default function Room() {
   const cursorUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [language, setLanguage] = useState<Language>("javascript");
   type Language = keyof typeof LANGUAGE_VERSIONS;
+  const [socket] = useState(() =>
+    io(API, {
+      path: "/socket.io",
+      transports: ["websocket"],
+      autoConnect: false,
+    })
+  );
+  const [output, setOutput] = useState("");
+
+  const navigate = useNavigate();
+
+  const handleRunCode = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) return alert("Please log in to run code.");
+    setOutput("Executing code...");
+    console.log(`1. Sending request to: ${API}/rooms/${room_id}/run`);
+    const response = await fetch(`${API}/rooms/${room_id}/run`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        language: language,
+      }),
+    });
+
+    console.log(
+      "2. Received response from backend with status:",
+      response.status
+    );
+  };
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
         currentUserIdRef.current = data.user.id;
       }
     });
