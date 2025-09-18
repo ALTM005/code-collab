@@ -269,18 +269,165 @@ export default function Room() {
   };
 
   return (
-    <Box minH="100vh" bg="#0fa19" color="gray.500" px={6} py={8}>
-        <h2>Room: {room_id}</h2>
-        <Box>
-          <LanguageSelector/>
-            <Editor
-            height="75vh"
-            theme="vs-dark"
-            defaultLanguage="javascript"
-            defaultValue={"// Welcome! Start coding..."}
-            onMount={OnMount}
-            options={{ fontSize: 14, minimap: { enabled: false } }}
-            />
+    <Box bg="gray.900" color="gray.100" minH="100dvh">
+      <Box
+        as="header"
+        px={{ base: 3, md: 6 }}
+        py={3}
+        borderBottomWidth="2px"
+        borderColor="gray.700"
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        gap={3}
+      >
+        <Box display="flex" alignItems="center" gap={3} flexWrap="wrap">
+          <Box color="gray.400">Room:</Box>
+          <Box fontFamily="mono" bg="gray.800" px={3} py={1} rounded="md">
+            {room_id}
+          </Box>
+        </Box>
+
+        <Box display="flex" gap={2}>
+          <Box
+            as="button"
+            onClick={() => navigator.clipboard.writeText(window.location.href)}
+            px={3}
+            py={1.5}
+            rounded="md"
+            borderWidth="2px"
+            borderColor="gray.700"
+            _hover={{ bg: "gray.800" }}
+          >
+            Invite
+          </Box>
+          <Box
+            as="button"
+            onClick={() => navigate("/")}
+            px={3}
+            py={1.5}
+            rounded="md"
+            bg="red.500"
+            _hover={{ bg: "red.400" }}
+          >
+            Leave
+          </Box>
+        </Box>
+      </Box>
+
+      <Box px={{ base: 3, md: 6 }} py={4}>
+        <Box display="flex" gap={4} flexWrap={{ base: "wrap", lg: "nowrap" }}>
+          <Box
+            flex={{ base: "1 1 100%", lg: "1 1 65%" }}
+            minW={{ base: "100%", lg: 0 }}
+            bg="gray.850"
+            borderWidth="2px"
+            borderColor="gray.700"
+            rounded="xl"
+            overflow="hidden"
+          >
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              px={4}
+              py={3}
+              borderBottomWidth="2px"
+              borderColor="gray.700"
+              bg="gray.900"
+            >
+              <Box fontWeight="semibold">Editor</Box>
+              <LanguageSelector language={language} onSelect={onSelect} />
+            </Box>
+
+            <Box px={0} py={0}>
+              <Editor
+                height="70vh"
+                theme="vs-dark"
+                language={language}
+                defaultValue={CODE_SNIPPETS[language]}
+                onMount={OnMount}
+                options={{ fontSize: 14, minimap: { enabled: false } }}
+              />
+            </Box>
+          </Box>
+
+          <VStack
+            align="stretch"
+            flex={{ base: "1 1 100%", lg: "1 1 35%" }}
+            minW={{ base: "100%", lg: 0 }}
+            gap={4}
+            h="full"
+          >
+            <Box
+              bg="gray.850"
+              borderWidth="2px"
+              borderColor="gray.700"
+              rounded="xl"
+              overflow="hidden"
+              h="45vh" // Fixed height for output
+              display="flex"
+              flexDirection="column"
+            >
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                px={4}
+                py={3}
+                borderBottomWidth="2px"
+                borderColor="gray.700"
+                bg="gray.900"
+                flexShrink={0}
+              >
+                <Box fontWeight="semibold">Output</Box>
+                <Box
+                  as="button"
+                  onClick={handleRunCode}
+                  px={3}
+                  py={1.5}
+                  rounded="md"
+                  bg="green.400"
+                  color="black"
+                  _hover={{ bg: "green.300" }}
+                >
+                  Run Code
+                </Box>
+              </Box>
+
+              <Box p={0}>
+                <Output output={output} />
+              </Box>
+            </Box>
+
+            <Box
+              bg="gray.850"
+              borderWidth="2px"
+              borderColor="gray.700"
+              rounded="xl"
+              overflow="hidden"
+              flex="1" 
+              minH="40vh" 
+              display="flex"
+              flexDirection="column"
+            >
+              <Box
+                px={4}
+                py={3}
+                borderBottomWidth="2px"
+                borderColor="gray.700"
+                bg="gray.900"
+                fontWeight="semibold"
+              >
+                Chat
+              </Box>
+
+              <Box p={0}>
+                <Chat socket={socket} />
+              </Box>
+            </Box>
+          </VStack>
+        </Box>
       </Box>
 
       {/* remote cursor styles */}
@@ -300,6 +447,5 @@ export default function Room() {
         .join("\n")}
     `}</style>
     </Box>
-
   );
 }
