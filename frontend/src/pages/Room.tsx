@@ -224,14 +224,13 @@ export default function Room() {
     editor.focus();
     monacoRef.current = monaco;
 
-
     editor.onDidChangeCursorPosition((event) => {
       //skip the remote change using isApplyingRemoteChange.current
-      if(isApplyingRemoteChange.current){
+      if (isApplyingRemoteChange.current) {
         return;
       }
 
-      if(currentUserIdRef.current && socketRef.current?.connected){
+      if (currentUserIdRef.current && socket.connected) {
         //clear timeout
         if (cursorUpdateTimeoutRef.current) {
           clearTimeout(cursorUpdateTimeoutRef.current);
