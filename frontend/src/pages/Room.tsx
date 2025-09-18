@@ -165,6 +165,9 @@ export default function Room() {
       });
     }); //removes cursors
 
+    socket.on("execution-result", (data: { output: string }) => {
+      setOutput(data.output);
+    });
 
     socket.on("language-update", (data: { language: Language }) => {
       if (data.language) {
@@ -181,6 +184,7 @@ export default function Room() {
       socket.off("initial-code");
       socket.off("code-update");
       socket.off("cursor");
+      socket.off("execution-result");
       socket.off("language-update");
       socket.off("user-disconnected");
       if (cursorUpdateTimeoutRef.current) {
