@@ -1,7 +1,17 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
-import { Box, Container, Heading, Stack } from "@chakra-ui/react";
+import {
+  Box,
+  Container,
+  Heading,
+  Stack,
+  Field,
+  Input,
+  InputGroup,
+  IconButton,
+} from "@chakra-ui/react";
+import { LuEye, LuEyeOff } from "react-icons/lu";
 
 const API = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 
@@ -11,6 +21,7 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
   const [session, setSession] = useState<any>(null);
+  const [showPw, setShowPw] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -127,18 +138,46 @@ export default function Home() {
           <Heading size="md">Real time collab & code</Heading>
           {!session ? (
             <>
-              <input
-                value={email}
-                name="email"
-                onChange={(event) => setEmail(event.target.value.trim())}
-                placeholder="Email"
-              />
-              <input
-                value={password}
-                name="password"
-                onChange={(event) => setPassword(event.target.value.trim())}
-                placeholder="Password"
-              />
+              <Field.Root id="email" required>
+                <Field.Label>Email</Field.Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value.trim())}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                />
+              </Field.Root>
+
+              <Field.Root id="password" required>
+                <Field.Label>
+                  Password <Field.RequiredIndicator />
+                </Field.Label>
+
+                <InputGroup
+                  endElement={
+                    <IconButton
+                      aria-label={showPw ? "Hide password" : "Show password"}
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowPw((s) => !s)}
+                    >
+                      {showPw ? <LuEyeOff /> : <LuEye />}
+                    </IconButton>
+                  }
+                >
+                  <Input
+                    id="password"
+                    type={showPw ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)} 
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                  />
+                </InputGroup>
+              </Field.Root>
+
               <button onClick={signUp}>Sign Up</button>
               <button onClick={signIn}>Sign In</button>
               <p>{status}</p>
