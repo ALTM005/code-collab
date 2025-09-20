@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
+import { Box, Container, Heading, Stack } from "@chakra-ui/react";
 
 const API = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 
@@ -106,35 +107,53 @@ export default function Home() {
   };
 
   return (
-    <div>
-      <h1>Real time collab and code</h1>
-      {!session ? (
-        <>
-          <input
-            value={email}
-            name="email"
-            onChange={(event) => setEmail(event.target.value.trim())}
-            placeholder="Email"
-          />
-          <input
-            value={password}
-            name="password"
-            onChange={(event) => setPassword(event.target.value.trim())}
-            placeholder="Password"
-          />
-          <button onClick={signUp}>Sign Up</button>
-          <button onClick={signIn}>Sign In</button>
-          <p>{status}</p>
-        </>
-      ) : (
-        <>
-          <span>Signed in as {session.user.email}</span>
-          <button onClick={signOut}>Sign Out</button>
-          <button onClick={handleCreateRoom}>Create Room</button>
-          <button onClick={onJoin}>Join Room</button>
-          <p>{status}</p>
-        </>
-      )}
-    </div>
+    <Box
+      minH="100dvh"
+      bg="gray.900"
+      color="gray.100"
+      display="grid"
+      placeItems="center"
+      px={4}
+    >
+      <Container maxW="md">
+        <Stack
+          gap={6}
+          bg="gray.800"
+          borderWidth="1px"
+          borderColor="gray.700"
+          rounded="xl"
+          p={6}
+        >
+          <Heading size="md">Real time collab & code</Heading>
+          {!session ? (
+            <>
+              <input
+                value={email}
+                name="email"
+                onChange={(event) => setEmail(event.target.value.trim())}
+                placeholder="Email"
+              />
+              <input
+                value={password}
+                name="password"
+                onChange={(event) => setPassword(event.target.value.trim())}
+                placeholder="Password"
+              />
+              <button onClick={signUp}>Sign Up</button>
+              <button onClick={signIn}>Sign In</button>
+              <p>{status}</p>
+            </>
+          ) : (
+            <>
+              <span>Signed in as {session.user.email}</span>
+              <button onClick={signOut}>Sign Out</button>
+              <button onClick={handleCreateRoom}>Create Room</button>
+              <button onClick={onJoin}>Join Room</button>
+              <p>{status}</p>
+            </>
+          )}
+        </Stack>
+      </Container>
+    </Box>
   );
 }
