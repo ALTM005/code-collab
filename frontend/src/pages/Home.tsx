@@ -10,6 +10,9 @@ import {
   Input,
   InputGroup,
   IconButton,
+  Button,
+  Text,
+  Separator,
 } from "@chakra-ui/react";
 import { LuEye, LuEyeOff } from "react-icons/lu";
 
@@ -171,23 +174,54 @@ export default function Home() {
                     id="password"
                     type={showPw ? "text" : "password"}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)} 
+                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     autoComplete="current-password"
                   />
                 </InputGroup>
               </Field.Root>
 
-              <button onClick={signUp}>Sign Up</button>
-              <button onClick={signIn}>Sign In</button>
-              <p>{status}</p>
+              <Stack direction="row">
+                <Button onClick={signIn} colorScheme="purple" flex="1">
+                  Sign In
+                </Button>
+                <Button
+                  onClick={signUp}
+                  colorScheme="purple" variant="solid"
+                  flex="1"
+                >
+                  Sign Up
+                </Button>
+              </Stack>
+              <Text fontSize="sm" color="gray.400">
+                {status}
+              </Text>
             </>
           ) : (
             <>
-              <span>Signed in as {session.user.email}</span>
-              <button onClick={signOut}>Sign Out</button>
-              <button onClick={handleCreateRoom}>Create Room</button>
-              <button onClick={onJoin}>Join Room</button>
+              <Text fontSize="sm" color="gray.300">
+                Signed in as{" "}
+                <Text as="span" fontWeight="semibold">
+                  {session.user.email}
+                </Text>
+              </Text>
+              <Stack direction="row">
+                <Button onClick={handleCreateRoom} colorScheme="green" flex="1">
+                  Create Room
+                </Button>
+                <Button
+                  onClick={onJoin}
+                  variant="solid"
+                  flex="1"
+                >
+                  Join Room
+                </Button>
+              </Stack>
+              <Separator borderColor="gray.700" variant="solid"
+                  flex="1" />
+              <Button onClick={signOut} >
+                Sign Out
+              </Button>
               <p>{status}</p>
             </>
           )}
