@@ -7,7 +7,7 @@ interface OutputProps{
 
 const Output = ({output}:OutputProps) =>{
     return(
-        <Box color="gray.500">
+        <Box color="gray.400">
             
             <Box
             height="75vh"
