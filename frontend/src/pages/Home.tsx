@@ -1,6 +1,20 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
+import {
+  Box,
+  Container,
+  Heading,
+  Stack,
+  Field,
+  Input,
+  InputGroup,
+  IconButton,
+  Button,
+  Text,
+  Separator,
+} from "@chakra-ui/react";
+import { LuEye, LuEyeOff } from "react-icons/lu";
 
 const API = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 
@@ -10,6 +24,7 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
   const [session, setSession] = useState<any>(null);
+  const [showPw, setShowPw] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -106,35 +121,112 @@ export default function Home() {
   };
 
   return (
-    <div>
-      <h1>Real time collab and code</h1>
-      {!session ? (
-        <>
-          <input
-            value={email}
-            name="email"
-            onChange={(event) => setEmail(event.target.value.trim())}
-            placeholder="Email"
-          />
-          <input
-            value={password}
-            name="password"
-            onChange={(event) => setPassword(event.target.value.trim())}
-            placeholder="Password"
-          />
-          <button onClick={signUp}>Sign Up</button>
-          <button onClick={signIn}>Sign In</button>
-          <p>{status}</p>
-        </>
-      ) : (
-        <>
-          <span>Signed in as {session.user.email}</span>
-          <button onClick={signOut}>Sign Out</button>
-          <button onClick={handleCreateRoom}>Create Room</button>
-          <button onClick={onJoin}>Join Room</button>
-          <p>{status}</p>
-        </>
-      )}
-    </div>
+    <Box
+      minH="100dvh"
+      bg="gray.900"
+      color="gray.100"
+      display="grid"
+      placeItems="center"
+      px={4}
+    >
+      <Container maxW="md">
+        <Stack
+          gap={6}
+          bg="gray.800"
+          borderWidth="1px"
+          borderColor="gray.700"
+          rounded="xl"
+          p={6}
+        >
+          <Heading size="md">Real time collab & code</Heading>
+          {!session ? (
+            <>
+              <Field.Root id="email" required>
+                <Field.Label>Email</Field.Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value.trim())}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                />
+              </Field.Root>
+
+              <Field.Root id="password" required>
+                <Field.Label>
+                  Password <Field.RequiredIndicator />
+                </Field.Label>
+
+                <InputGroup
+                  endElement={
+                    <IconButton
+                      aria-label={showPw ? "Hide password" : "Show password"}
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowPw((s) => !s)}
+                    >
+                      {showPw ? <LuEyeOff /> : <LuEye />}
+                    </IconButton>
+                  }
+                >
+                  <Input
+                    id="password"
+                    type={showPw ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                  />
+                </InputGroup>
+              </Field.Root>
+
+              <Stack direction="row">
+                <Button onClick={signIn} colorScheme="purple" flex="1">
+                  Sign In
+                </Button>
+                <Button
+                  onClick={signUp}
+                  colorScheme="purple" variant="solid"
+                  flex="1"
+                >
+                  Sign Up
+                </Button>
+              </Stack>
+              <Text fontSize="sm" color="gray.400">
+                {status}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text fontSize="sm" color="gray.300">
+                Signed in as{" "}
+                <Text as="span" fontWeight="semibold">
+                  {session.user.email}
+                </Text>
+              </Text>
+              <Stack direction="row">
+                <Button onClick={handleCreateRoom} colorScheme="green" flex="1">
+                  Create Room
+                </Button>
+                <Button
+                  onClick={onJoin}
+                  variant="solid"
+                  flex="1"
+                >
+                  Join Room
+                </Button>
+              </Stack>
+              <Separator borderColor="gray.700" variant="solid"
+                  flex="1" />
+              <Button onClick={signOut} >
+                Sign Out
+              </Button>
+              <p>{status}</p>
+            </>
+          )}
+        </Stack>
+      </Container>
+    </Box>
   );
 }
