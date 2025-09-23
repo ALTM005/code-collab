@@ -224,6 +224,12 @@ def health():
 
 @app.post("/rooms")
 async def create_room(user_id : str = Depends(get_user_id)):
+    default_js = (
+        "function greet(name) {\n"
+        '  console.log("Hello, " + name + "!");\n'
+        "}\n"
+        'greet("World");\n'
+    )
     async with httpx.AsyncClient() as client:
         r = await client.post(
             url=f'{SUPABASE_URL}/rest/v1/rooms',
@@ -235,7 +241,8 @@ async def create_room(user_id : str = Depends(get_user_id)):
             },
             json={
                 "title":None,
-                "creator":user_id
+                "creator":user_id,
+                "code": default_js
             }
         )
         r.raise_for_status()
