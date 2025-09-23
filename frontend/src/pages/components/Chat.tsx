@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
 import {
   Box,
-  Heading,
   VStack,
   Text,
   HStack,
   Input,
-  Button,
 } from "@chakra-ui/react";
 import { type Socket } from "socket.io-client";
 
