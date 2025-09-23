@@ -76,7 +76,7 @@ async def join(sid, data):
     #Log user in shell
     print(f"Socket {sid} joined room {room_id}")
 
-    current_code = "function greet(name) {\n\tconsole.log(`Hello, ${name}!`);\n}\n\ngreet('World');\n"
+    current_code = None
     try:
         async with httpx.AsyncClient() as client:
             r = await client.get(
@@ -92,8 +92,8 @@ async def join(sid, data):
             current_code = r.json()[0]["code"]
     except httpx.HTTPStatusError as e:
         print(f"Error fetching code for room {room_id}, error: {e}")
-
-    await sio.emit("initial-code", {"code": current_code}, to=sid)
+    if current_code is not None:
+        await sio.emit("initial-code", {"code": current_code}, to=sid)
 
 
 @sio.event
