@@ -1,186 +1,193 @@
-````md
+```markdown
 # CodeCollab
+![License](https://img.shields.io/badge/license-MIT-blue.svg) ![React](https://img.shields.io/badge/frontend-React-61DAFB.svg) ![FastAPI](https://img.shields.io/badge/backend-FastAPI-009688.svg)
 
-A real-time collaborative code editor for technical interviews and pair programming. CodeCollab combines the Monaco Editor (VS Code’s editor engine) with low-latency WebSocket syncing, in-room chat, and secure, sandboxed code execution.
+A high-performance, real-time collaborative code editor engineered for technical interviews and pair programming. CodeCollab combines the **Monaco Editor** (VS Code’s engine) with low-latency **WebSocket** syncing, in-room chat, and secure, sandboxed code execution.
+
+*Note: This project utilizes a specialized client-server architecture designed for low-latency updates and secure code isolation.*
 
 ---
 
 ## Table of Contents
 - [Live Demo](#live-demo)
-- [Screenshots](#screenshots)
 - [Features](#features)
-- [Architecture Overview](#architecture-overview)
-- [Project Layout](#project-layout)
+- [Project Structure](#project-structure)
 - [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
+- [Installation](#installation)
 - [Environment Variables](#environment-variables)
 - [Usage](#usage)
 - [Deployment](#deployment)
 - [Roadmap](#roadmap)
-- [License](#license)
 
 ---
 
 ## Live Demo
-
-Frontend: https://codencollab-app.vercel.app
-
----
-
-## Screenshots
-
-_Add these after you capture them:_
-
-![Editor](./assets/editor.png)
-![Live Cursors](./assets/cursors.gif)
-![Chat](./assets/chat.png)
+**Frontend:** [https://codencollab-app.vercel.app](https://codencollab-app.vercel.app)
 
 ---
 
 ## Features
-
-- Real-time collaborative code editing via Socket.IO
-- Live, color-coded multi-user cursor tracking
-- Room-based collaboration with shareable Room IDs
-- In-room chat for fast feedback and communication
-- Supabase authentication (JWT sessions) with protected access
-- Multi-language code execution via the Piston API (sandboxed)
-- Responsive UI built for interview-style workflows
+- **Real-time Synchronization:** Conflict-free code editing using Socket.IO.
+- **Live Cursor Tracking:** See exactly where your teammates are typing with color-coded cursors.
+- **Multi-Language Execution:** Run code in 20+ languages powered by the secure Piston API.
+- **Integrated Chat:** Discuss logic and share feedback instantly within the editor interface.
+- **Secure Auth:** Protected routes and session management via Supabase JWTs.
 
 ---
 
-## Architecture Overview
-
-CodeCollab uses a client–server architecture optimized for real-time collaboration:
-
-- The **frontend** (React + Monaco) captures editor changes and user actions
-- The **backend** (FastAPI) manages rooms, validates authentication, and coordinates real-time events
-- **Socket.IO** carries low-latency events (code changes, cursors, chat, language updates)
-- **Supabase** provides authentication and session tokens (JWT)
-- **Piston** executes code in an isolated sandbox (code is not executed directly on your server)
-
-Real-time events are scoped to a Room ID so updates are only broadcast to users in the same room.
-
----
-
-## Project Layout
-
+## Project Structure
 ```bash
 code-collab/
-├── backend/                # FastAPI server + Socket.IO events + execution proxy
-├── frontend/               # React/Vite client + Monaco editor + Chakra UI
+├── backend/
+│   ├── app/
+│   │   └── main.py          # FastAPI entry point
+│   ├── .env                 # Backend secrets
+│   └── requirements.txt     # Python dependencies
+│
+├── frontend/
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── components/
+│   │   │   │   ├── Chat.tsx              # Real-time chat component
+│   │   │   │   ├── LanguageSelector.tsx  # Dropdown for language selection
+│   │   │   │   └── OutPut.tsx            # Code execution output display
+│   │   │   ├── Home.tsx     # Landing page
+│   │   │   └── Room.tsx     # Main collaboration room
+│   │   ├── supabaseClient.ts # Supabase configuration
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   │
+│   ├── .env                 # Frontend API keys
+│   └── vite.config.ts       # Vite configuration
+│
 └── README.md
-````
+
+```
 
 ---
 
 ## Tech Stack
 
-### Frontend
-
-* React (TypeScript)
-* Vite
-* Chakra UI
-* Monaco Editor
-* Socket.IO Client
-
-### Backend
-
-* Python
-* FastAPI
-* Socket.IO
-
-### Services / Infrastructure
-
-* Supabase (authentication & sessions)
-* Piston API (sandboxed code execution)
-* Vercel (frontend deployment)
-* Railway (backend hosting)
+| **Layer** | **Technology** | **Purpose** |
+| --- | --- | --- |
+| **Frontend** | React 18 & Monaco Editor | Manages editor state, local UI (Chakra), and socket events |
+| **Backend** | FastAPI & Socket.IO | Orchestrator for rooms, user auth, and proxying execution |
+| **Services** | Piston API & Supabase | Sandboxed code execution environment and database/auth |
+| **Hosting** | Vercel & Railway | Frontend and Backend deployment infrastructure |
 
 ---
 
-## Getting Started
+## Installation
 
 ### Prerequisites
 
 * Node.js 18+
 * Python 3.10+
-* A Supabase project (URL + anon key + JWT secret / service role key as required by your backend)
+* Supabase Account (URL + Anon Key)
 
-### Frontend Setup
+### 1. Clone Repository
 
 ```bash
-cd frontend
-npm install
-npm run dev
+git clone [https://github.com/your-username/code-collab.git](https://github.com/your-username/code-collab.git)
+cd code-collab
+
 ```
 
-### Backend Setup
+### 2. Backend Setup
+
+Navigate to the backend, create a virtual environment, and install dependencies.
 
 ```bash
 cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn main:app --reload
+
+```
+
+### 3. Frontend Setup
+
+Navigate to the frontend and install Node packages.
+
+```bash
+cd ../frontend
+npm install
+
 ```
 
 ---
 
 ## Environment Variables
 
-Create `.env` files in both directories.
+Create a `.env` file in **both** the `frontend` and `backend` directories using the templates below.
 
 ### Frontend (`frontend/.env`)
 
 ```env
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
-VITE_API_URL=
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_BACKEND_URL=http://localhost:8000
+
 ```
 
 ### Backend (`backend/.env`)
 
 ```env
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-JWT_SECRET=
-PISTON_API_URL=
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+JWT_SECRET=your_jwt_secret_from_supabase
+PISTON_API_URL=[https://emkc.org/api/v2/piston](https://emkc.org/api/v2/piston)
+
 ```
 
 ---
 
 ## Usage
 
-1. Start the backend (`uvicorn ...`)
-2. Start the frontend (`npm run dev`)
-3. Open the app in your browser (Vite will show the URL in your terminal)
-4. Create or join a room
-5. Share the **Room ID** with a teammate to collaborate in the same session
-6. Use **Run Code** to execute the current code through Piston and view the output in the UI
+**1. Start the Backend**
+
+```bash
+# Inside /backend (ensure venv is active)
+uvicorn main:app --reload
+
+```
+
+**2. Start the Frontend**
+
+```bash
+# Inside /frontend
+npm run dev
+
+```
+
+**3. Collaborate**
+
+* Open the URL provided by Vite (usually `http://localhost:5173`).
+* Create a room and copy the **Room ID**.
+* Share the ID with a partner to join the same session.
 
 ---
 
 ## Deployment
 
-* Frontend deployed on **Vercel**
-* Backend deployed on **Railway**
-* Frontend communicates with backend via REST endpoints and Socket.IO
-* The backend validates Supabase JWT sessions server-side before allowing protected actions
+* **Frontend:** Deployed on Vercel. Ensure environment variables are added in the Vercel Dashboard.
+* **Backend:** Deployed on Railway. Ensure the `PORT` variable is dynamically bound and the build command is set to `pip install -r requirements.txt`.
 
 ---
 
 ## Roadmap
 
-* Presence indicators (active users list)
-* Persistent room state and session history
-* Role-based permissions (viewer/editor)
-* File tree support per room
-* Improved execution output formatting and error handling
+* [ ] **Presence Indicators:** View avatars of active users in the room header.
+* [ ] **Persistent State:** Save code snippets to Supabase for later retrieval.
+* [ ] **Role Management:** Toggle between "Editor" and "Viewer" permissions.
+* [ ] **File Explorer:** Support for multiple files within a single collaboration room.
 
 ---
 
 ## License
 
-MIT License
+Distributed under the MIT License.
 
 ```
+
 ```
