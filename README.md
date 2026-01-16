@@ -67,37 +67,10 @@ Real-time events are scoped to a Room ID so updates are only broadcast to users 
 
 ```bash
 code-collab/
-├── backend/
-│   ├── app/
-│   │   └── main.py          # FastAPI entry point
-│   ├── .env                 # Backend secrets (Add this!)
-│   └── requirements.txt     # Python dependencies
-│
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   │   ├── assets/
-│   │   ├── pages/
-│   │   │   ├── components/
-│   │   │   │   ├── Chat.tsx              # Real-time chat component
-│   │   │   │   ├── LanguageSelector.tsx  # Dropdown for language selection
-│   │   │   │   └── OutPut.tsx            # Code execution output display
-│   │   │   ├── Home.tsx     # Landing page
-│   │   │   └── Room.tsx     # Main collaboration room
-│   │   ├── supabaseClient.ts # Supabase configuration
-│   │   ├── theme.ts          # Chakra UI theme
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   │
-│   ├── .env                 # Frontend API keys (Add this!)
-│   ├── eslint.config.js
-│   ├── index.html
-│   ├── package.json
-│   ├── vercel.json          # Vercel deployment config
-│   └── vite.config.ts       # Vite configuration
-│
+├── backend/                # FastAPI server + Socket.IO events + execution proxy
+├── frontend/               # React/Vite client + Monaco editor + Chakra UI
 └── README.md
-```
+````
 
 ---
 
@@ -208,3 +181,6 @@ PISTON_API_URL=
 ## License
 
 MIT License
+
+```
+```
