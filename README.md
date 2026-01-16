@@ -1,4 +1,3 @@
-```markdown
 # CodeCollab
 ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![React](https://img.shields.io/badge/frontend-React-61DAFB.svg) ![FastAPI](https://img.shields.io/badge/backend-FastAPI-009688.svg)
 
@@ -62,7 +61,6 @@ code-collab/
 │
 └── README.md
 
-```
 
 ---
 
