@@ -1,10 +1,10 @@
 # System Architecture
 
-This document breaks down how CodeCollab works under the hood. It explains our data flow, the "Hybrid" execution model we implemented, and the specific trade-offs we made for low-latency performance.
+This document breaks down how CodenCollab works under the hood. It explains our data flow, the "Hybrid" execution model we implemented, and the specific trade-offs we made for low-latency performance.
 
 ## High-Level Overview
 
-CodeCollab operates on a **Pub/Sub (Publish/Subscribe)** model.
+CodenCollab operates on a **Pub/Sub (Publish/Subscribe)** model.
 - **Publishers:** Clients (browsers) emit events like keystrokes or cursor movements.
 - **Subscriber/Broadcaster:** The FastAPI backend receives these events and immediately broadcasts them to other users in the same "Room."
 
