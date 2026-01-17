@@ -9,6 +9,7 @@ A high-performance, real-time collaborative code editor built for technical inte
 
 ## Table of Contents
 - [Live Demo](#live-demo)
+- [Screenshots](#screenshots)
 - [Features](#features)
 - [Project Structure](#project-structure)
 - [Tech Stack](#tech-stack)
@@ -23,7 +24,26 @@ A high-performance, real-time collaborative code editor built for technical inte
 
 ## Live Demo
 
-**Frontend:** https://codencollab-app.vercel.app
+**Application:** https://codencollab-app.vercel.app
+
+---
+
+## Screenshots
+
+### Authentication
+![Authentication](./assets/auth.gif)
+
+### Home / Lobby
+![Home](./assets/home.png)
+
+### Collaboration Room
+![Room](./assets/room.gif)
+
+### Live Chat
+![Chat](./assets/chat.gif)
+
+### Code Execution Output
+![Execution Output](./assets/output.gif)
 
 ---
 
@@ -63,8 +83,16 @@ code-collab/
 │   ├── .env                 # Frontend environment variables
 │   └── vite.config.ts       # Vite configuration
 │
+│
+│
+├── .env.example    # Environment variable template
+│
+├── LICENSE
+│
+├── assets/
+│
 └── README.md
-````
+```
 
 ---
 
@@ -90,7 +118,7 @@ code-collab/
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/your-username/code-collab.git
+git clone https://github.com/ALTM005/code-collab.git
 cd code-collab
 ```
 
@@ -119,18 +147,19 @@ Create a `.env` file in **both** directories.
 ### Frontend (`frontend/.env`)
 
 ```env
+VITE_API_URL=http://localhost:8000
 VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
-VITE_BACKEND_URL=http://localhost:8000
+VITE_SUPABASE_ANON_KEY =
 ```
 
 ### Backend (`backend/.env`)
 
 ```env
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-JWT_SECRET=
-PISTON_API_URL=https://emkc.org/api/v2/piston
+FRONTEND_ORIGIN =http://localhost:5173
+SUPABASE_URL =
+SUPABASE_SERVICE_ROLE =
+SUPABASE_JWT_SECRET =
+PISTON_API =https://emkc.org/api/v2/piston/execute
 ```
 
 ---
