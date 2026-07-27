@@ -101,28 +101,71 @@ async def disconnect(sid):
 @sio.event
 async def join(sid, data):
     room_id = data["room_id"]
+    sess = await sio.get_session(sid)
+    user_id = sess.get("user_id")
+
+    # Every Supabase call below uses the service-role key, which bypasses RLS.
+    # This membership check is therefore the only access control gate on room
+    # content there is — there is no database-level policy backing it up.
+    allowed = False
+    rows = []
+
+    if not user_id:
+        print(f"Join denied for {sid}: no user_id on session")
+    else:
+        try:
+            async with httpx.AsyncClient() as client:
+                r = await client.get(
+                    url=f'{SUPABASE_URL}/rest/v1/rooms?id=eq.{room_id}&select=creator,code',
+                    headers={
+                        "apikey": SUPABASE_SERVICE_ROLE,
+                        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE}",
+                        "Content-Type": "application/json",
+                    },
+                )
+                r.raise_for_status()
+                rows = r.json()
+        except httpx.HTTPStatusError as e:
+            print(f"Join denied for {sid}: error looking up room {room_id}: {e}")
+
+        if not rows:
+            print(f"Join denied for {sid}: room {room_id} does not exist")
+        elif rows[0].get("creator") == user_id:
+            allowed = True
+        else:
+            try:
+                async with httpx.AsyncClient() as client:
+                    r = await client.get(
+                        url=f'{SUPABASE_URL}/rest/v1/sessions?room_id=eq.{room_id}&user_id=eq.{user_id}&select=user_id',
+                        headers={
+                            "apikey": SUPABASE_SERVICE_ROLE,
+                            "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE}",
+                            "Content-Type": "application/json",
+                        },
+                    )
+                    r.raise_for_status()
+                    allowed = bool(r.json())
+            except httpx.HTTPStatusError as e:
+                print(f"Join denied for {sid}: error checking membership for room {room_id}: {e}")
+
+            if not allowed:
+                print(f"Join denied for {sid}: user {user_id} is not a member of room {room_id}")
+
+    if not allowed:
+        await sio.emit(
+            "join-error",
+            {"message": "You don't have access to this room."},
+            to=sid,
+        )
+        return
+
     async with sio.session(sid) as session:
         session["room_id"] = room_id
     await sio.enter_room(sid, room_id)
     #Log user in shell
     print(f"Socket {sid} joined room {room_id}")
 
-    current_code = None
-    try:
-        async with httpx.AsyncClient() as client:
-            r = await client.get(
-            url = f'{SUPABASE_URL}/rest/v1/rooms?id=eq.{room_id}&select=code',
-            headers={
-                "apikey": SUPABASE_SERVICE_ROLE,
-                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE}",
-                "Content-Type": "application/json",
-            }
-        )
-        r.raise_for_status()
-        if r.json() and r.json()[0].get("code") is not None:
-            current_code = r.json()[0]["code"]
-    except httpx.HTTPStatusError as e:
-        print(f"Error fetching code for room {room_id}, error: {e}")
+    current_code = rows[0].get("code")
     if current_code is not None:
         await sio.emit("initial-code", {"code": current_code}, to=sid)
 
