@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Depends, Header, HTTPException
 import os, httpx
 from dotenv import load_dotenv
@@ -9,6 +11,8 @@ from socketio.exceptions import ConnectionRefusedError
 from starlette.applications import Starlette
 import asyncio
 from pydantic import BaseModel
+
+from . import sandbox
 
 class RunRequest(BaseModel):
     language:str
@@ -47,6 +51,11 @@ SUPABASE_SERVICE_ROLE = os.getenv("SUPABASE_SERVICE_ROLE")
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN")
 PISTON_API = os.getenv("PISTON_API")
+
+# Piston's public instance was locked down Feb 2026 - this flag exists only
+# as a disabled fallback in case a key ever becomes available again. The
+# active execution path is the Docker sandbox in sandbox.py.
+USE_PISTON = os.getenv("USE_PISTON", "false").lower() == "true"
 
 sio = socketio.AsyncServer(
     async_mode="asgi",
@@ -220,14 +229,25 @@ async def language_change(sid, data):
         
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Piece 8: clean up containers left behind by a previous process that
+    # crashed between container.create() and its own finally-block cleanup.
+    if not USE_PISTON:
+        killed = await sandbox.reap_orphaned_containers()
+        if killed:
+            print(f"Sandbox reaper: removed {killed} orphaned container(s) on startup")
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_ORIGIN,"http://127.0.0.1:5173"], 
+    allow_origins=[FRONTEND_ORIGIN,"http://127.0.0.1:5173"],
     allow_credentials=True,
-    allow_methods=["*"],  
-    allow_headers=["*"],  
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -384,32 +404,56 @@ async def run_code(room_id:str, request:RunRequest, user_id:str = Depends(get_us
         return {"status": "error fetching code"}
     
 
-    try:
-        selected_language = request.language
-        language_ver = LANGUAGE_VERSIONS.get(selected_language,"18.15.0")
-        async with httpx.AsyncClient() as client:
-            r = await client.post(
-                url = PISTON_API,
-                json={
-                    "language": selected_language,
-                    "version": language_ver,
-                    "files": [{"content": code_run}]
-                }
-            )
-            result= r.json()
-    except Exception as e:
-        await sio.emit("execution-result", {"output": f"Error contacting Piston API: {e}"}, room=room_id)
-        return {"status": "error with piston"}
+    selected_language = request.language
 
-    print("INCOMING RUN REQUEST BODY:", result)
+    if USE_PISTON:
+        # Disabled fallback - see the USE_PISTON comment above. Kept for one
+        # commit in case a Piston key becomes available again.
+        try:
+            language_ver = LANGUAGE_VERSIONS.get(selected_language,"18.15.0")
+            async with httpx.AsyncClient() as client:
+                r = await client.post(
+                    url = PISTON_API,
+                    json={
+                        "language": selected_language,
+                        "version": language_ver,
+                        "files": [{"content": code_run}]
+                    }
+                )
+                result= r.json()
+        except Exception as e:
+            await sio.emit("execution-result", {"output": f"Error contacting Piston API: {e}"}, room=room_id)
+            return {"status": "error with piston"}
 
-    output = result.get("run", {}).get("output", "No output.")
-    if result.get("run", {}).get("stderr"):
-         output = result["run"]["stderr"]
+        output = result.get("run", {}).get("output", "No output.")
+        if result.get("run", {}).get("stderr"):
+             output = result["run"]["stderr"]
 
-    await sio.emit("execution-result", {"output": output}, room=room_id)
+        await sio.emit("execution-result", {"output": output}, room=room_id)
+        return {"status": "Execution triggered"}
 
-    return {"status": "Execution triggered"}
+    result = await sandbox.run_sandboxed(selected_language, code_run)
+
+    output = result.output
+    if result.failure == sandbox.FailureReason.TIMEOUT:
+        output = f"Execution timed out after {sandbox.TIMEOUT_SECONDS}s.\n{output}"
+    elif result.failure == sandbox.FailureReason.OOM_KILLED:
+        output = f"Execution was killed for exceeding the memory limit ({sandbox.MEMORY_LIMIT}).\n{output}"
+    if result.truncated:
+        output += f"\n[output truncated at {sandbox.OUTPUT_CAP_BYTES} bytes]"
+
+    await sio.emit(
+        "execution-result",
+        {
+            "output": output,
+            "failure": result.failure.value,
+            "exit_code": result.exit_code,
+            "truncated": result.truncated,
+        },
+        room=room_id,
+    )
+
+    return {"status": "Execution triggered", "failure": result.failure.value}
             
 
 
