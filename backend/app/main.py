@@ -176,14 +176,14 @@ for k in ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE", "SUPABASE_JWT_SECRET","PISTON
 
 #Temporary Code due to bug
 
-def get_user_id(authorization: str | None = Header(default=None)) -> str:
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
+class TokenError(Exception):
+    pass
 
-    token = authorization.replace("Bearer", "", 1).strip()
-    if not token:
-        raise HTTPException(status_code=401, detail="Invalid Authorization header")
 
+def verify_token(token: str) -> dict:
+    """Decode and validate a Supabase access token. Shared by the REST
+    dependency (get_user_id) and the Socket.IO connect handler so there is
+    exactly one definition of what makes a token valid."""
     try:
         unverified = jwt.get_unverified_claims(token)
         print("UNVERIFIED:", {
@@ -200,20 +200,37 @@ def get_user_id(authorization: str | None = Header(default=None)) -> str:
             token,
             SUPABASE_JWT_SECRET,
             algorithms=["HS256"],
-            options={"verify_aud": False}, 
+            options={"verify_aud": False},
         )
-        expected_iss = f"{SUPABASE_URL}/auth/v1"
-        iss = payload.get("iss")
-        if iss != expected_iss:
-            print(f"Issuer Mismatch: got {iss}, expected {expected_iss}") 
-
-        sub = payload.get("sub")
-        if not sub:
-            raise HTTPException(status_code=401, detail="Invalid token (no sub)")
-        return sub
     except JWTError as e:
         print("JWT decode error:", repr(e))
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise TokenError("Invalid token")
+
+    expected_iss = f"{SUPABASE_URL}/auth/v1"
+    iss = payload.get("iss")
+    if iss != expected_iss:
+        print(f"Issuer Mismatch: got {iss}, expected {expected_iss}")
+
+    if not payload.get("sub"):
+        raise TokenError("Invalid token (no sub)")
+
+    return payload
+
+
+def get_user_id(authorization: str | None = Header(default=None)) -> str:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    token = authorization.replace("Bearer", "", 1).strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Invalid Authorization header")
+
+    try:
+        payload = verify_token(token)
+    except TokenError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+    return payload["sub"]
 
 
 
