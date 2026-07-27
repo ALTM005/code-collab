@@ -107,6 +107,11 @@ export default function Room() {
 
     socket.on("connect", onConnect);
 
+    socket.on("join-error", (data: { message: string }) => {
+      alert(data.message || "You don't have access to this room.");
+      navigate("/");
+    });
+
     socket.on("initial-code", (data) => {
       if (data.code) {
         isApplyingRemoteChange.current = true;
@@ -186,6 +191,7 @@ export default function Room() {
 
     return () => {
       socket.off("connect");
+      socket.off("join-error");
       socket.off("initial-code");
       socket.off("code-update");
       socket.off("cursor");
