@@ -274,19 +274,23 @@ def verify_token(token: str) -> dict:
             token,
             SUPABASE_JWT_SECRET,
             algorithms=["HS256"],
-            options={"verify_aud": False},
+            audience="authenticated",
         )
     except JWTError as e:
         print("JWT decode error:", repr(e))
         raise TokenError("Invalid token")
 
+    # jose only checks a claim's *value* when the claim is present - it silently
+    # skips verification if the claim is missing (e.g. verify_aud with no "aud"
+    # in the token). Assert presence ourselves rather than rely on that.
+    missing = [claim for claim in ("sub", "aud", "iss", "exp") if not payload.get(claim)]
+    if missing:
+        raise TokenError(f"Token missing required claim(s): {', '.join(missing)}")
+
     expected_iss = f"{SUPABASE_URL}/auth/v1"
     iss = payload.get("iss")
     if iss != expected_iss:
-        print(f"Issuer Mismatch: got {iss}, expected {expected_iss}")
-
-    if not payload.get("sub"):
-        raise TokenError("Invalid token (no sub)")
+        raise TokenError(f"Issuer mismatch: got {iss!r}, expected {expected_iss!r}")
 
     return payload
 
