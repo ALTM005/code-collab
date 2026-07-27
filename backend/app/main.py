@@ -101,7 +101,8 @@ async def disconnect(sid):
 @sio.event
 async def join(sid, data):
     room_id = data["room_id"]
-    await sio.save_session(sid, {"room_id":room_id})
+    async with sio.session(sid) as session:
+        session["room_id"] = room_id
     await sio.enter_room(sid, room_id)
     #Log user in shell
     print(f"Socket {sid} joined room {room_id}")
