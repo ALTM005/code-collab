@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from jose import jwt, JWTError
 from time import time 
 import socketio
+from socketio.exceptions import ConnectionRefusedError
 from starlette.applications import Starlette
 import asyncio
 from pydantic import BaseModel
@@ -56,13 +57,42 @@ sio = socketio.AsyncServer(
 sio_app = socketio.ASGIApp(sio)
 
 
+socket_expiry_tasks: dict[str, asyncio.Task] = {}
+
+async def _expire_socket(sid, delay):
+    await asyncio.sleep(delay)
+    print(f"Token expired for {sid}, disconnecting")
+    await sio.disconnect(sid)
+
 @sio.event
-async def connect(sid, environ):
-    print("Socket Connected", sid)
+async def connect(sid, environ, auth):
+    token = (auth or {}).get("token")
+    if not token:
+        raise ConnectionRefusedError("Missing token")
+
+    try:
+        payload = verify_token(token)
+    except TokenError as e:
+        raise ConnectionRefusedError(str(e))
+
+    user_id = payload["sub"]
+    await sio.save_session(sid, {"user_id": user_id})
+
+    exp = payload.get("exp")
+    if exp is not None:
+        delay = exp - time()
+        if delay <= 0:
+            raise ConnectionRefusedError("Token expired")
+        socket_expiry_tasks[sid] = asyncio.create_task(_expire_socket(sid, delay))
+
+    print("Socket Connected", sid, "user", user_id)
 
 @sio.event
 async def disconnect(sid):
     print("Socket Disconnected",sid)
+    task = socket_expiry_tasks.pop(sid, None)
+    if task:
+        task.cancel()
     sess = await sio.get_session(sid)
     room_id = sess.get("room_id")
     if room_id:
