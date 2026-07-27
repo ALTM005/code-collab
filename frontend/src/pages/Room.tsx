@@ -47,6 +47,11 @@ export default function Room() {
       path: "/socket.io",
       transports: ["websocket"],
       autoConnect: false,
+      auth: (cb: (data: { token?: string }) => void) => {
+        supabase.auth.getSession().then(({ data }) => {
+          cb({ token: data.session?.access_token });
+        });
+      },
     })
   );
   const [output, setOutput] = useState("");
