@@ -23,3 +23,6 @@ Thumbs.db
 
 #.env template tracked
 !.env.example
+
+ANSWERS.md
+SANDBOX_BRIEF.md
