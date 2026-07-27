@@ -233,7 +233,9 @@ async def language_change(sid, data):
 async def lifespan(app: FastAPI):
     # Piece 8: clean up containers left behind by a previous process that
     # crashed between container.create() and its own finally-block cleanup.
-    if not USE_PISTON:
+    # Skipped entirely if Docker itself isn't reachable in this environment -
+    # sandbox.py already logged why at import time.
+    if not USE_PISTON and sandbox.SANDBOX_AVAILABLE:
         killed = await sandbox.reap_orphaned_containers()
         if killed:
             print(f"Sandbox reaper: removed {killed} orphaned container(s) on startup")
@@ -431,6 +433,15 @@ async def run_code(room_id:str, request:RunRequest, user_id:str = Depends(get_us
 
         await sio.emit("execution-result", {"output": output}, room=room_id)
         return {"status": "Execution triggered"}
+
+    if not sandbox.SANDBOX_AVAILABLE:
+        message = "Code execution is unavailable in this environment."
+        await sio.emit(
+            "execution-result",
+            {"output": message, "failure": "sandbox_unavailable", "exit_code": None, "truncated": False},
+            room=room_id,
+        )
+        return {"status": "error", "failure": "sandbox_unavailable"}
 
     result = await sandbox.run_sandboxed(selected_language, code_run)
 

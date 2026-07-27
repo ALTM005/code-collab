@@ -23,10 +23,30 @@ from enum import Enum
 from typing import Callable, Optional
 
 import docker
-from docker.errors import NotFound
+from docker.errors import DockerException, NotFound
 from docker.types import Mount, Ulimit
 
-_client = docker.from_env()
+_client = None
+SANDBOX_AVAILABLE = False
+
+
+def _connect_docker() -> None:
+    """Try to reach a Docker daemon. Failure here must never crash the
+    import of this module - main.py imports sandbox unconditionally, and a
+    hosting environment with no Docker daemon reachable (nothing about that
+    has been verified for this app's Railway deployment) would otherwise
+    take the entire backend down, not just code execution."""
+    global _client, SANDBOX_AVAILABLE
+    try:
+        _client = docker.from_env()
+        SANDBOX_AVAILABLE = True
+    except DockerException as e:
+        _client = None
+        SANDBOX_AVAILABLE = False
+        print(f"WARNING: Docker is unavailable, code execution will be disabled: {e}")
+
+
+_connect_docker()
 
 # Every container we create carries this label so the startup reaper (piece 8)
 # can find ours specifically and never touches unrelated containers.
